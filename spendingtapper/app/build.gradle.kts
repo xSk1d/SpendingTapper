@@ -16,8 +16,12 @@ val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
 }
 
+// Blank counts as absent. CI always defines the signing env vars and leaves them
+// empty when no keystore secret is set, so getenv returns "" rather than null and
+// an unguarded null check would hand rootProject.file an empty path.
 fun signingValue(propertyKey: String, envKey: String): String? =
-    keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey)
+    (keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey))
+        ?.takeIf { it.isNotBlank() }
 
 val keystorePath = signingValue("storeFile", "SPENDINGTAPPER_KEYSTORE_FILE")
 val hasReleaseKeystore = keystorePath != null && rootProject.file(keystorePath).exists()
