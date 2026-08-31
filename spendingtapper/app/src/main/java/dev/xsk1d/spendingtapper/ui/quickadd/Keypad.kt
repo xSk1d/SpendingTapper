@@ -1,8 +1,10 @@
 package dev.xsk1d.spendingtapper.ui.quickadd
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -99,11 +102,28 @@ private fun Key(
     val haptics = LocalHapticFeedback.current
     val interaction = remember { MutableInteractionSource() }
 
+    // A ripple alone is easy to miss on One UI, and on a keypad the only feedback that
+    // a digit registered is the key itself. Hold the whole key filled while it is down.
+    val pressed by interaction.collectIsPressedAsState()
+    val keyColor by animateColorAsState(
+        targetValue = if (pressed) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        label = "keyBackground",
+    )
+    val labelColor = if (pressed) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
     Box(
         modifier = modifier
             .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier.heightIn(min = height))
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(keyColor)
             .combinedClickable(
                 interactionSource = interaction,
                 indication = ripple(),
@@ -127,7 +147,7 @@ private fun Key(
         Text(
             text = label,
             style = KeypadStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = labelColor,
         )
     }
 }

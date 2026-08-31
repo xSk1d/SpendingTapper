@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +30,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -405,12 +407,27 @@ private fun AmountDisplay(state: QuickAddUiState, compact: Boolean) {
 private fun KindToggle(kind: Kind, onKindChange: (Kind) -> Unit, modifier: Modifier = Modifier) {
     SingleChoiceSegmentedButtonRow(modifier) {
         Kind.entries.forEachIndexed { index, entry ->
+            val isSelected = kind == entry
             SegmentedButton(
-                selected = kind == entry,
+                selected = isSelected,
                 onClick = { onKindChange(entry) },
                 shape = SegmentedButtonDefaults.itemShape(index, Kind.entries.size),
+                // The default active container is a tint of secondaryContainer, which sits
+                // too close to the surface to read at a glance on a phone held at arm's
+                // length. A filled primary swatch is unambiguous.
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surface,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    inactiveBorderColor = MaterialTheme.colorScheme.outline,
+                ),
             ) {
-                Text(if (entry == Kind.NEED) "Need" else "Want")
+                Text(
+                    text = if (entry == Kind.NEED) "Need" else "Want",
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                )
             }
         }
     }
@@ -441,10 +458,29 @@ private fun WithWhoRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 names.forEach { name ->
+                    val isSelected = selected.any { it.equals(name, ignoreCase = true) }
                     FilterChip(
-                        selected = selected.any { it.equals(name, ignoreCase = true) },
+                        selected = isSelected,
                         onClick = { onToggle(name) },
                         label = { Text(name, maxLines = 1) },
+                        // Colour alone is not enough on a chip this small, so a selected
+                        // name also grows a tick.
+                        leadingIcon = if (isSelected) {
+                            {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
                     )
                 }
             }
