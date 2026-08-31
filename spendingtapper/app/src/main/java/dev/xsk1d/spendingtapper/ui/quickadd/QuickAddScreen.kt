@@ -1,18 +1,22 @@
 package dev.xsk1d.spendingtapper.ui.quickadd
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -95,11 +99,16 @@ fun QuickAddScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
+    // Deliberately NOT safeDrawingPadding() here: safeDrawing includes the IME, so the
+    // keyboard opening used to shrink maxHeight below the compact threshold. That swapped
+    // the inline fields for the collapsed summary button, which removed the very text
+    // field that had just taken focus — so the keyboard closed the instant you tapped it.
+    // Measure against the insets that do not move, and let the IME pad the content inside.
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .safeDrawingPadding()
-            .imePadding()
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .windowInsetsPadding(WindowInsets.displayCutout)
     ) {
         // The Flip's cover display is short and near-square. Below this height there is
         // not room for the keypad, the Save button and the optional fields at once, so
@@ -109,6 +118,7 @@ fun QuickAddScreen(
         Column(
             Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 10.dp),
         ) {
@@ -120,7 +130,7 @@ fun QuickAddScreen(
                 compact = compact,
             )
 
-            AmountDisplay(state = state, compact = compact)
+            AmountDisplay(state = state, compact = compact, onOpenSettings = onOpenSettings)
 
             KindToggle(
                 kind = state.kind,
@@ -135,7 +145,7 @@ fun QuickAddScreen(
             } else {
                 Column(
                     Modifier
-                        .weight(1f, fill = false)
+                        .weight(1f)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -352,7 +362,7 @@ private fun TopBar(
 }
 
 @Composable
-private fun AmountDisplay(state: QuickAddUiState, compact: Boolean) {
+private fun AmountDisplay(state: QuickAddUiState, compact: Boolean, onOpenSettings: () -> Unit) {
     val symbol = state.settings.currencySymbol
     Column(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Bottom) {
@@ -393,10 +403,16 @@ private fun AmountDisplay(state: QuickAddUiState, compact: Boolean) {
                 fontWeight = FontWeight.Medium,
             )
         } else {
+            // The budget lives behind the gear in the corner, which is not where anyone
+            // looks. Make the line that reports it missing be the thing that fixes it.
             Text(
-                text = "No budget set",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "No budget set — tap to set one",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clickable(onClick = onOpenSettings)
+                    .padding(vertical = 4.dp),
             )
         }
     }
