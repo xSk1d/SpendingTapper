@@ -1,74 +1,55 @@
-name: SpendingTapper
+name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['spendingtapper/**', '.github/workflows/android.yml']
-  pull_request:
-    paths: ['spendingtapper/**', '.github/workflows/android.yml']
-  workflow_dispatch:
+
+# The job only reads the repo and uploads an artifact, so the token gets nothing
+# else. Worth being explicit on a public repo: `npm ci` runs dependency install
+# scripts, and a write-capable default token is what turns a bad package into a
+# push to your branches.
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Test and build APK
+  apk:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: spendingtapper
-    env:
-      # The secrets context cannot be read from a step's `if`, so surface the one
-      # flag we branch on as a job-level env var.
-      HAS_KEYSTORE: ${{ secrets.SPENDINGTAPPER_KEYSTORE_BASE64 != '' }}
-
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v5
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build web bundle
+        run: npm run build
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - uses: android-actions/setup-android@v3
 
-      # Optional. Without these secrets the release APK is signed with a throwaway
-      # debug key, which installs fine but cannot be updated over a previous build.
-      # See the README for how to generate the keystore and set the secrets.
-      - name: Restore signing keystore
-        if: env.HAS_KEYSTORE == 'true'
-        env:
-          KEYSTORE_BASE64: ${{ secrets.SPENDINGTAPPER_KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > app/spendingtapper-release.jks
+      - name: Sync web assets into the Android project
+        run: npx cap sync android
 
-      - name: Unit tests
-        run: ./gradlew test --no-daemon
+      - name: Assemble debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Lint
-        run: ./gradlew lintDebug --no-daemon
-
-      - name: Build release APK
-        env:
-          SPENDINGTAPPER_KEYSTORE_FILE: ${{ secrets.SPENDINGTAPPER_KEYSTORE_BASE64 != '' && 'app/spendingtapper-release.jks' || '' }}
-          SPENDINGTAPPER_KEYSTORE_PASSWORD: ${{ secrets.SPENDINGTAPPER_KEYSTORE_PASSWORD }}
-          SPENDINGTAPPER_KEY_ALIAS: ${{ secrets.SPENDINGTAPPER_KEY_ALIAS }}
-          SPENDINGTAPPER_KEY_PASSWORD: ${{ secrets.SPENDINGTAPPER_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Remove keystore
-        if: always()
-        run: rm -f app/spendingtapper-release.jks
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v5
         with:
-          name: spendingtapper-apk
-          path: spendingtapper/app/build/outputs/apk/release/app-release.apk
+          name: spendingtapper-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-
-      - name: Upload test report on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-report
-          path: spendingtapper/app/build/reports/

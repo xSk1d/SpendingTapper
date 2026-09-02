@@ -1,0 +1,478 @@
+:root {
+  --bg: #12100e;
+  --surface: #1a1713;
+  --surface-2: #2a2621;
+  --border: #3a342c;
+  --text: #ede5da;
+  --muted: #cfc6ba;
+  --accent: #f5c542;
+  --on-accent: #221b00;
+  --need: #f5c542;
+  --want: #d5a3ff;
+  --danger: #ff8a80;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fdfaf3;
+    --surface: #ffffff;
+    --surface-2: #ece3d2;
+    --border: #d6cdba;
+    --text: #1d1b16;
+    --muted: #4c463a;
+    --accent: #8a6a00;
+    --on-accent: #ffffff;
+    --need: #8a6a00;
+    --want: #6b3fa0;
+    --danger: #b3261e;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* The entry screen is a full-height column: the keypad and Save are pinned to
+   the bottom where a thumb is, and only the middle scrolls. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px
+    calc(env(safe-area-inset-bottom) + 10px);
+  gap: 10px;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-btn:active {
+  background: var(--surface-2);
+}
+
+.topbar-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* ---------- amount ---------- */
+
+.amount {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.amount-symbol {
+  font-size: 22px;
+  color: var(--muted);
+  padding-bottom: 10px;
+}
+
+.amount-value {
+  font-size: 56px;
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.amount-zero {
+  color: var(--muted);
+}
+
+.budget-line {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.budget-low {
+  color: #ffb74d;
+}
+
+.budget-over {
+  color: var(--danger);
+}
+
+/* The budget lives behind the gear, which is not where anyone looks. When it is
+   unset, the line that says so is itself the way to set it. */
+.budget-set {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+/* ---------- segmented (need / want) ---------- */
+
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.seg {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Selection is a filled swatch, not a few percent of tint. Being able to tell
+   at a glance which of two options is live is the whole job of this control. */
+.seg-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- fields ---------- */
+
+.middle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Colour alone is not enough on something this small, so a selected name also
+   grows a tick. */
+.chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.whenrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.linkbtn {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 6px;
+  cursor: pointer;
+}
+
+/* ---------- keypad ---------- */
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.key {
+  min-height: 58px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 26px;
+  cursor: pointer;
+  /* Hold the whole key filled while it is down. On a keypad the key itself is
+     the only feedback that a digit registered. */
+  transition: background-color 90ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.key:active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- buttons ---------- */
+
+.primary {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+}
+
+.secondary {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+}
+
+/* ---------- history ---------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 24px;
+}
+
+.month {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.month-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.month-total {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+/* These are spans (a button may not contain a div), so they need to be told to
+   stack — left inline, the description and the time run together. */
+.entry-body {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-desc {
+  display: block;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entry-amount {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dot-need {
+  background: var(--need);
+}
+
+.dot-want {
+  background: var(--want);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 40px 16px;
+}
+
+/* ---------- settings ---------- */
+
+.setting {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0 32px;
+}

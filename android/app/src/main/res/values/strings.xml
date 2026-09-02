@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SpendingTapper</string>
+    <string name="title_activity_main">SpendingTapper</string>
+    <string name="package_name">dev.xsk1d.spendingtapper</string>
+    <string name="custom_url_scheme">dev.xsk1d.spendingtapper</string>
+</resources>
