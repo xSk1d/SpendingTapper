@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { format as formatDate, isSameDay, isValid, parse as parseDateFns } from 'date-fns'
 import Keypad from '../components/Keypad'
-import { currentCycle, spentInCycle } from '../lib/cycle'
+import BudgetMeter from '../components/BudgetMeter'
+import MeterLegend from '../components/MeterLegend'
 import { appendDigit, backspace, digitsToCents, formatCents, formatGrouped } from '../lib/money'
 import { dedupePeople } from '../lib/people'
+import { summariseCycle } from '../lib/summary'
 import { hasBudget, recentPeople, useStore } from '../lib/store'
 import type { Kind } from '../lib/types'
 import { closeApp } from '../lib/platform'
@@ -57,13 +59,17 @@ export default function QuickAddPage() {
   const canSave = amountCents > 0
 
   // What will be left after this purchase, counting down as you type. This is the
-  // one number worth looking at while entering an amount.
-  const projectedLeftCents = useMemo(() => {
-    if (!hasBudget(settings)) return 0
-    const cycle = currentCycle(new Date(), settings.cycleStartDay)
+  // one number worth looking at while entering an amount — and the meter under it
+  // is the same figure as a picture, split by where the money already went.
+  //
+  // The entry being edited is held out of the totals: it is about to be replaced by
+  // whatever is on the keypad, so counting both would charge for it twice.
+  const summary = useMemo(() => {
     const others = editing ? expenses.filter((e) => e.id !== editing.id) : expenses
-    return settings.monthlyBudgetCents - spentInCycle(others, cycle) - amountCents
+    return summariseCycle(others, settings, new Date(), amountCents)
   }, [expenses, settings, amountCents, editing])
+
+  const projectedLeftCents = hasBudget(settings) ? summary.remainingCents : 0
 
   const known = useMemo(
     () => dedupePeople([...people, ...recentPeople(expenses)]),
@@ -163,19 +169,31 @@ export default function QuickAddPage() {
         </div>
 
         {hasBudget(settings) ? (
-          <div
-            className={
-              projectedLeftCents < 0
-                ? 'budget-line budget-over'
-                : projectedLeftCents < settings.monthlyBudgetCents / 10
-                  ? 'budget-line budget-low'
-                  : 'budget-line'
-            }
-          >
-            {projectedLeftCents < 0
-              ? `${formatGrouped(-projectedLeftCents, settings.currencySymbol)} over budget`
-              : `${formatGrouped(projectedLeftCents, settings.currencySymbol)} left this month`}
-          </div>
+          <>
+            <div
+              className={
+                projectedLeftCents < 0
+                  ? 'budget-line budget-over'
+                  : projectedLeftCents < settings.monthlyBudgetCents / 10
+                    ? 'budget-line budget-low'
+                    : 'budget-line'
+              }
+            >
+              {projectedLeftCents < 0
+                ? `${formatGrouped(-projectedLeftCents, settings.currencySymbol)} over budget`
+                : `${formatGrouped(projectedLeftCents, settings.currencySymbol)} left this month`}
+            </div>
+            {/* The same number as a picture: how much of the budget is gone, split by
+                where it went, with the amount on the keypad shown as its own segment
+                so you can see this purchase land before committing to it. */}
+            <BudgetMeter
+              summary={summary}
+              symbol={settings.currencySymbol}
+              pendingCents={amountCents}
+              pendingKind={kind}
+            />
+            <MeterLegend summary={summary} symbol={settings.currencySymbol} />
+          </>
         ) : (
           <button type="button" className="budget-set" onClick={() => navigate('/settings')}>
             No budget set — tap to set one

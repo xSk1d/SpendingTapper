@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { format as formatDate, isToday, isYesterday } from 'date-fns'
+import CycleSummaryCard from '../components/CycleSummaryCard'
 import { format as formatMoney, formatGrouped } from '../lib/money'
-import { useStore } from '../lib/store'
+import { hasBudget, useStore } from '../lib/store'
+import { summariseCycle } from '../lib/summary'
 import type { Expense } from '../lib/types'
 
 type DayGroup = { key: string; date: Date; expenses: Expense[]; totalCents: number }
@@ -40,9 +42,14 @@ function dayLabel(date: Date): string {
 export default function HistoryPage() {
   const navigate = useNavigate()
   const expenses = useStore((s) => s.expenses)
-  const symbol = useStore((s) => s.settings.currencySymbol)
+  const settings = useStore((s) => s.settings)
+  const symbol = settings.currencySymbol
 
   const months = useMemo(() => groupByMonthAndDay(expenses), [expenses])
+  const summary = useMemo(
+    () => summariseCycle(expenses, settings, new Date()),
+    [expenses, settings],
+  )
 
   return (
     <div className="screen">
@@ -66,6 +73,8 @@ export default function HistoryPage() {
         <p className="empty">Nothing logged yet.</p>
       ) : (
         <div className="middle">
+          <CycleSummaryCard summary={summary} symbol={symbol} hasBudget={hasBudget(settings)} />
+
           <div className="list">
             {months.map((month) => (
               <section key={month.key}>

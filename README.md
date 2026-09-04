@@ -18,6 +18,12 @@ The screen shows one number you actually care about while you type: **what will 
 in this month's budget after this purchase**. It counts down as you key in the amount and
 turns red if the entry would put you over.
 
+Under it is the same figure as a picture — a bar showing how much of the budget is gone,
+split into what went on needs and what went on wants, with the amount currently on the
+keypad drawn as its own faded segment so you can watch this purchase land before you
+commit to it. History leads with the fuller version: what is left, the same split, and a
+column per day of the cycle so far.
+
 ## Opening it with a back-tap
 
 One UI has no back-tap gesture of its own, so this comes from Samsung's Good Lock:
@@ -73,7 +79,7 @@ cannot parse are skipped and counted rather than failing the whole import.
 ```bash
 npm install
 npm run dev     # the whole app in a browser, no phone needed
-npm test        # 50 unit and DOM tests
+npm test        # 73 unit and DOM tests
 npm run build   # type-check, then bundle into dist/
 ```
 
@@ -103,7 +109,8 @@ src/
   lib/store.ts     zustand, persisted to localStorage, versioned for migrations
   lib/files.ts     share-sheet save and file-picker read, with browser fallbacks
   lib/platform.ts  the one place that knows whether this is the APK or a browser
-  components/      the keypad
+  lib/summary.ts   the cycle totals and day buckets the visuals are drawn from
+  components/      the keypad, the budget meter, the cycle summary
   routes/          quick add, history, settings
 ```
 
@@ -115,6 +122,13 @@ that drifts by a fraction of a cent per entry is a budget you stop trusting.
 **Saving closes the app.** That is deliberate, not a crash — the next back-tap should
 land on an empty keypad, not on the entry you just finished. In a browser there is
 nothing to close, so the form resets in place instead.
+
+**Needs and wants are never told apart by colour alone.** Both are always named with
+their totals beside the bar, the daily chart has a table view under it with every number
+in it, and the two hues were checked against colour-blind simulation for both the light
+and dark palettes rather than picked by eye. The chart fills are their own tokens
+(`--need-fill`, `--want-fill`), separate from the amber UI accent: a large block of
+colour and a button want different steps of the same hue.
 
 The tests cover the parts where the logic actually lives: budget cycle boundaries
 (including short months, the year rollover, and a full year swept day by day to prove

@@ -7,9 +7,17 @@
   --muted: #cfc6ba;
   --accent: #f5c542;
   --on-accent: #221b00;
-  --need: #f5c542;
-  --want: #d5a3ff;
   --danger: #ff8a80;
+  /* Chart fills are their own tokens, not the UI accent. A mark is a large block
+     of colour where the accent is a small one, so the two want different steps:
+     these sit inside the dark-mode lightness band (OKLCH L 0.48-0.67) and clear
+     colour-blind separation against each other and this surface. Validated, not
+     eyeballed. Needs stays on the amber hue, wants on the violet, so a glance at
+     the bar matches the dots in the history list. */
+  --need-fill: #b18900;
+  --want-fill: #8c52b8;
+  /* The unfilled part of the meter and the ground the columns stand on. */
+  --track: #2a2621;
   --radius: 14px;
   color-scheme: dark;
 }
@@ -24,9 +32,10 @@
     --muted: #4c463a;
     --accent: #8a6a00;
     --on-accent: #ffffff;
-    --need: #8a6a00;
-    --want: #6b3fa0;
     --danger: #b3261e;
+    --need-fill: #8a6a00;
+    --want-fill: #6b3fa0;
+    --track: #ece3d2;
     color-scheme: light;
   }
 }
@@ -438,11 +447,11 @@ select {
 }
 
 .dot-need {
-  background: var(--need);
+  background: var(--need-fill);
 }
 
 .dot-want {
-  background: var(--want);
+  background: var(--want-fill);
 }
 
 .empty {
@@ -475,4 +484,270 @@ select {
   flex-direction: column;
   gap: 8px;
   padding: 16px 0 32px;
+}
+
+/* ---------- budget meter ----------
+
+   One ratio against one limit, with the fill stacked by kind so the same mark
+   answers "what is left" and "what did it go on". Segments are held apart by a
+   2px gap in the surface colour — a stroke around each would add ink that is not
+   data. Colours come from the --*-fill tokens, which are validated chart steps,
+   not the UI accent. */
+
+.meter {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  /* When spend exactly fills the budget the segments plus their gap total a few
+     pixels over the track. Clipping the last 2px of a fill is invisible; letting
+     the bar bulge past its track is not. */
+  overflow: hidden;
+}
+
+.meter-tall {
+  height: 14px;
+  margin-top: 12px;
+}
+
+.meter-seg {
+  flex: none;
+  /* A one-cent segment still rounds to something you can see. Below this the
+     segment renders as nothing at all, which reads as "no wants at all". */
+  min-width: 2px;
+}
+
+.meter-need {
+  background: var(--need-fill);
+}
+
+.meter-want {
+  background: var(--want-fill);
+}
+
+/* The amount on the keypad is not spent yet, so it is drawn provisionally — same
+   hue, half weight — rather than as another committed block. */
+.meter-pending-need,
+.meter-pending-want {
+  opacity: 0.5;
+}
+
+.meter-pending-need {
+  background: var(--need-fill);
+}
+
+.meter-pending-want {
+  background: var(--want-fill);
+}
+
+/* Once the cycle is over budget the scale switches to the spend, and this notch
+   marks where the limit fell. Surface-coloured, so it separates without adding ink. */
+.meter-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--bg);
+}
+
+/* ---------- legend ---------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The swatch carries the identity so the text does not have to. A chart fill is
+   chosen to work as a block of colour, and would be illegible as 12px type. */
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.swatch-need {
+  background: var(--need-fill);
+}
+
+.swatch-want {
+  background: var(--want-fill);
+}
+
+.legend-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- cycle summary card ---------- */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.card-range {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The one number this screen leads with. Same sans as everything else, and
+   proportional figures — tabular-nums would make it look gappy at this size. */
+.hero {
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 2px 0;
+}
+
+.hero-over {
+  color: var(--danger);
+}
+
+.card-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- daily columns ---------- */
+
+.cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+  margin-top: 16px;
+  /* The only chrome the chart gets: one hairline for the days to stand on. */
+  border-bottom: 1px solid var(--border);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  flex: 1 1 0;
+  /* Never let a column fill its slot — the leftover is the air the chart needs. */
+  max-width: 24px;
+  height: 100%;
+}
+
+.col-seg {
+  flex: none;
+  width: 100%;
+}
+
+/* Rounded at the data end, square where it meets the baseline. */
+.col-cap {
+  border-radius: 4px 4px 0 0;
+}
+
+.col-need {
+  background: var(--need-fill);
+}
+
+.col-want {
+  background: var(--want-fill);
+}
+
+.cols-axis {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* The extreme is the one value worth labelling directly; the rest live in the
+   table below rather than crowding 30 numbers onto a phone-width chart. */
+.cols-peak {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- table view ---------- */
+
+.table-view {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.table-view summary {
+  padding: 10px 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.numbers {
+  width: 100%;
+  border-collapse: collapse;
+  /* A column of numbers is exactly where equal-width digits belong. */
+  font-variant-numeric: tabular-nums;
+}
+
+.numbers th,
+.numbers td {
+  padding: 6px 4px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.numbers thead th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.numbers tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The day column is the row's name, so it reads left like the row headers under it. */
+.numbers thead th:first-child {
+  text-align: left;
 }

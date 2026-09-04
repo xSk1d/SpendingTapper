@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import {
   NOW,
+  SETTINGS,
   makeExpense,
   renderApp,
   seedStore,
@@ -144,11 +145,13 @@ describe('history', () => {
         makeExpense({ id: 'b', amountCents: 250, description: 'bus' }),
       ],
     })
-    renderApp('/history')
+    const { container } = renderApp('/history')
 
     expect(screen.getByText('March 2026')).toBeInTheDocument()
+    // Scoped to the list: the cycle summary above it shows the same total again.
+    const list = container.querySelector('.list') as HTMLElement
     // Both entries fall on one day, so the day total and the month total agree.
-    expect(screen.getAllByText('$12.50')).toHaveLength(2)
+    expect(within(list).getAllByText('$12.50')).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: /coffee/ }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
@@ -209,5 +212,149 @@ describe('with who', () => {
     await user.type(screen.getByLabelText('Add someone'), 'Alex{Enter}')
     // Typing a name both creates the chip and puts it on this entry.
     expect(screen.getByRole('button', { name: /Alex/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('the budget meter', () => {
+  it('draws the split by kind and grows as an amount is tapped in', async () => {
+    const user = setupUser()
+    seedStore({
+      settings: { ...SETTINGS, monthlyBudgetCents: 100_00 },
+      expenses: [
+        makeExpense({ id: 'a', amountCents: 2000, kind: 'NEED' }),
+        makeExpense({ id: 'b', amountCents: 3000, kind: 'WANT' }),
+      ],
+    })
+    const { container } = renderApp()
+
+    const need = container.querySelector('.meter-need') as HTMLElement
+    const want = container.querySelector('.meter-want') as HTMLElement
+    expect(need.style.width).toBe('20%')
+    expect(want.style.width).toBe('30%')
+
+    // Nothing on the keypad yet, so there is no provisional segment to draw.
+    expect(container.querySelector('.meter-pending-need')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '00' }))
+
+    const pending = container.querySelector('.meter-pending-need') as HTMLElement
+    expect(pending.style.width).toBe('10%')
+    // The committed segments keep their share — the budget is still the yardstick.
+    expect((container.querySelector('.meter-need') as HTMLElement).style.width).toBe('20%')
+  })
+
+  it('rescales to the spend and marks the limit once over budget', () => {
+    seedStore({
+      settings: { ...SETTINGS, monthlyBudgetCents: 100_00 },
+      expenses: [makeExpense({ amountCents: 150_00, kind: 'NEED' })],
+    })
+    const { container } = renderApp()
+
+    // The bar now measures $150, so the budget notch sits two thirds along it.
+    expect((container.querySelector('.meter-need') as HTMLElement).style.width).toBe('100%')
+    expect((container.querySelector('.meter-limit') as HTMLElement).style.left).toBe('66.6667%')
+    expect(screen.getByText('$50.00 over budget')).toBeInTheDocument()
+  })
+
+  it('names both kinds in the legend rather than relying on colour', () => {
+    seedStore({
+      settings: { ...SETTINGS, monthlyBudgetCents: 100_00 },
+      expenses: [
+        makeExpense({ id: 'a', amountCents: 2000, kind: 'NEED' }),
+        makeExpense({ id: 'b', amountCents: 3000, kind: 'WANT' }),
+      ],
+    })
+    const { container } = renderApp()
+
+    const legend = container.querySelector('.legend') as HTMLElement
+    expect(within(legend).getByText('Needs')).toBeInTheDocument()
+    expect(within(legend).getByText('$20.00')).toBeInTheDocument()
+    expect(within(legend).getByText('Wants')).toBeInTheDocument()
+    expect(within(legend).getByText('$30.00')).toBeInTheDocument()
+  })
+
+  it('is not drawn at all until a budget exists', () => {
+    seedStore({ expenses: [makeExpense()] })
+    const { container } = renderApp()
+
+    expect(container.querySelector('.meter')).toBeNull()
+    expect(screen.getByRole('button', { name: /No budget set/ })).toBeInTheDocument()
+  })
+})
+
+describe('the cycle summary', () => {
+  const CYCLE = [
+    makeExpense({
+      id: 'a',
+      amountCents: 2000,
+      kind: 'NEED',
+      occurredAt: new Date(2026, 2, 3, 9).getTime(),
+    }),
+    makeExpense({
+      id: 'b',
+      amountCents: 3000,
+      kind: 'WANT',
+      occurredAt: new Date(2026, 2, 9, 19).getTime(),
+    }),
+    makeExpense({
+      id: 'c',
+      amountCents: 1000,
+      kind: 'NEED',
+      occurredAt: new Date(2026, 2, 9, 21).getTime(),
+    }),
+  ]
+
+  it('leads with what is left and breaks it down', () => {
+    seedStore({ settings: { ...SETTINGS, monthlyBudgetCents: 100_00 }, expenses: CYCLE })
+    const { container } = renderApp('/history')
+
+    expect(screen.getByText('Left to spend')).toBeInTheDocument()
+    expect((container.querySelector('.hero') as HTMLElement).textContent).toBe('$40.00')
+    expect(screen.getByText('$60.00 of $100.00 spent')).toBeInTheDocument()
+    expect(screen.getByText('1 Mar – 31 Mar')).toBeInTheDocument()
+  })
+
+  it('draws one column per elapsed day, scaled to the busiest', () => {
+    seedStore({ settings: { ...SETTINGS, monthlyBudgetCents: 100_00 }, expenses: CYCLE })
+    const { container } = renderApp('/history')
+
+    // 1-15 March inclusive; the rest of the month has not happened yet.
+    expect(container.querySelectorAll('.col')).toHaveLength(15)
+
+    const columns = [...container.querySelectorAll('.col')]
+    // 9 March is the peak at $40, so its two segments fill the plot between them.
+    const peak = columns[8]
+    expect((peak.querySelector('.col-want') as HTMLElement).style.height).toBe('75%')
+    expect((peak.querySelector('.col-need') as HTMLElement).style.height).toBe('25%')
+    // 3 March is needs only, so it gets the rounded cap and no want segment.
+    expect(columns[2].querySelector('.col-want')).toBeNull()
+    expect(columns[2].querySelector('.col-need')?.className).toContain('col-cap')
+    expect(columns[3].querySelectorAll('.col-seg')).toHaveLength(0)
+
+    expect(screen.getByText(/Busiest Mon 9 · \$40\.00/)).toBeInTheDocument()
+  })
+
+  it('carries every value in a table as well as the chart', async () => {
+    const user = setupUser()
+    seedStore({ settings: { ...SETTINGS, monthlyBudgetCents: 100_00 }, expenses: CYCLE })
+    const { container } = renderApp('/history')
+
+    await user.click(screen.getByText('Show the numbers'))
+
+    const rows = [...container.querySelectorAll('.numbers tbody tr')]
+    expect(rows).toHaveLength(2)
+    expect(rows[0].textContent).toBe('Tue 3 Mar$20.00$0.00$20.00')
+    expect(rows[1].textContent).toBe('Mon 9 Mar$10.00$30.00$40.00')
+  })
+
+  it('shows the spend instead of a remainder when no budget is set', () => {
+    seedStore({ expenses: CYCLE })
+    const { container } = renderApp('/history')
+
+    expect(screen.getByText('Spent this cycle')).toBeInTheDocument()
+    expect((container.querySelector('.hero') as HTMLElement).textContent).toBe('$60.00')
+    expect(container.querySelector('.card-sub')).toBeNull()
   })
 })

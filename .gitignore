@@ -5,9 +5,6 @@ dist-ssr
 .vercel
 .DS_Store
 
-# Local editor/tooling config
-.claude/
-
 # APK build output
 *.apk
 
