@@ -1,0 +1,753 @@
+:root {
+  --bg: #12100e;
+  --surface: #1a1713;
+  --surface-2: #2a2621;
+  --border: #3a342c;
+  --text: #ede5da;
+  --muted: #cfc6ba;
+  --accent: #f5c542;
+  --on-accent: #221b00;
+  --danger: #ff8a80;
+  /* Chart fills are their own tokens, not the UI accent. A mark is a large block
+     of colour where the accent is a small one, so the two want different steps:
+     these sit inside the dark-mode lightness band (OKLCH L 0.48-0.67) and clear
+     colour-blind separation against each other and this surface. Validated, not
+     eyeballed. Needs stays on the amber hue, wants on the violet, so a glance at
+     the bar matches the dots in the history list. */
+  --need-fill: #b18900;
+  --want-fill: #8c52b8;
+  /* The unfilled part of the meter and the ground the columns stand on. */
+  --track: #2a2621;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fdfaf3;
+    --surface: #ffffff;
+    --surface-2: #ece3d2;
+    --border: #d6cdba;
+    --text: #1d1b16;
+    --muted: #4c463a;
+    --accent: #8a6a00;
+    --on-accent: #ffffff;
+    --danger: #b3261e;
+    --need-fill: #8a6a00;
+    --want-fill: #6b3fa0;
+    --track: #ece3d2;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* The entry screen is a full-height column: the keypad and Save are pinned to
+   the bottom where a thumb is, and only the middle scrolls. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px
+    calc(env(safe-area-inset-bottom) + 10px);
+  gap: 10px;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-btn:active {
+  background: var(--surface-2);
+}
+
+.topbar-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* ---------- amount ---------- */
+
+.amount {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.amount-symbol {
+  font-size: 22px;
+  color: var(--muted);
+  padding-bottom: 10px;
+}
+
+.amount-value {
+  font-size: 56px;
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.amount-zero {
+  color: var(--muted);
+}
+
+.budget-line {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.budget-low {
+  color: #ffb74d;
+}
+
+.budget-over {
+  color: var(--danger);
+}
+
+/* The budget lives behind the gear, which is not where anyone looks. When it is
+   unset, the line that says so is itself the way to set it. */
+.budget-set {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+/* ---------- segmented (need / want) ---------- */
+
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.seg {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Selection is a filled swatch, not a few percent of tint. Being able to tell
+   at a glance which of two options is live is the whole job of this control. */
+.seg-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- fields ---------- */
+
+.middle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Colour alone is not enough on something this small, so a selected name also
+   grows a tick. */
+.chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.whenrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.linkbtn {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 6px;
+  cursor: pointer;
+}
+
+/* ---------- keypad ---------- */
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.key {
+  min-height: 58px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 26px;
+  cursor: pointer;
+  /* Hold the whole key filled while it is down. On a keypad the key itself is
+     the only feedback that a digit registered. */
+  transition: background-color 90ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.key:active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- buttons ---------- */
+
+.primary {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+}
+
+.secondary {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+}
+
+/* ---------- history ---------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 24px;
+}
+
+.month {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.month-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.month-total {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+/* These are spans (a button may not contain a div), so they need to be told to
+   stack — left inline, the description and the time run together. */
+.entry-body {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-desc {
+  display: block;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entry-amount {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dot-need {
+  background: var(--need-fill);
+}
+
+.dot-want {
+  background: var(--want-fill);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 40px 16px;
+}
+
+/* ---------- settings ---------- */
+
+.setting {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0 32px;
+}
+
+/* ---------- budget meter ----------
+
+   One ratio against one limit, with the fill stacked by kind so the same mark
+   answers "what is left" and "what did it go on". Segments are held apart by a
+   2px gap in the surface colour — a stroke around each would add ink that is not
+   data. Colours come from the --*-fill tokens, which are validated chart steps,
+   not the UI accent. */
+
+.meter {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  /* When spend exactly fills the budget the segments plus their gap total a few
+     pixels over the track. Clipping the last 2px of a fill is invisible; letting
+     the bar bulge past its track is not. */
+  overflow: hidden;
+}
+
+.meter-tall {
+  height: 14px;
+  margin-top: 12px;
+}
+
+.meter-seg {
+  flex: none;
+  /* A one-cent segment still rounds to something you can see. Below this the
+     segment renders as nothing at all, which reads as "no wants at all". */
+  min-width: 2px;
+}
+
+.meter-need {
+  background: var(--need-fill);
+}
+
+.meter-want {
+  background: var(--want-fill);
+}
+
+/* The amount on the keypad is not spent yet, so it is drawn provisionally — same
+   hue, half weight — rather than as another committed block. */
+.meter-pending-need,
+.meter-pending-want {
+  opacity: 0.5;
+}
+
+.meter-pending-need {
+  background: var(--need-fill);
+}
+
+.meter-pending-want {
+  background: var(--want-fill);
+}
+
+/* Once the cycle is over budget the scale switches to the spend, and this notch
+   marks where the limit fell. Surface-coloured, so it separates without adding ink. */
+.meter-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--bg);
+}
+
+/* ---------- legend ---------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The swatch carries the identity so the text does not have to. A chart fill is
+   chosen to work as a block of colour, and would be illegible as 12px type. */
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.swatch-need {
+  background: var(--need-fill);
+}
+
+.swatch-want {
+  background: var(--want-fill);
+}
+
+.legend-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- cycle summary card ---------- */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.card-range {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The one number this screen leads with. Same sans as everything else, and
+   proportional figures — tabular-nums would make it look gappy at this size. */
+.hero {
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 2px 0;
+}
+
+.hero-over {
+  color: var(--danger);
+}
+
+.card-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- daily columns ---------- */
+
+.cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+  margin-top: 16px;
+  /* The only chrome the chart gets: one hairline for the days to stand on. */
+  border-bottom: 1px solid var(--border);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  flex: 1 1 0;
+  /* Never let a column fill its slot — the leftover is the air the chart needs. */
+  max-width: 24px;
+  height: 100%;
+}
+
+.col-seg {
+  flex: none;
+  width: 100%;
+}
+
+/* Rounded at the data end, square where it meets the baseline. */
+.col-cap {
+  border-radius: 4px 4px 0 0;
+}
+
+.col-need {
+  background: var(--need-fill);
+}
+
+.col-want {
+  background: var(--want-fill);
+}
+
+.cols-axis {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* The extreme is the one value worth labelling directly; the rest live in the
+   table below rather than crowding 30 numbers onto a phone-width chart. */
+.cols-peak {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- table view ---------- */
+
+.table-view {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.table-view summary {
+  padding: 10px 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.numbers {
+  width: 100%;
+  border-collapse: collapse;
+  /* A column of numbers is exactly where equal-width digits belong. */
+  font-variant-numeric: tabular-nums;
+}
+
+.numbers th,
+.numbers td {
+  padding: 6px 4px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.numbers thead th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.numbers tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The day column is the row's name, so it reads left like the row headers under it. */
+.numbers thead th:first-child {
+  text-align: left;
+}

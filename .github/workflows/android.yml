@@ -1,0 +1,55 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# The job only reads the repo and uploads an artifact, so the token gets nothing
+# else. Worth being explicit on a public repo: `npm ci` runs dependency install
+# scripts, and a write-capable default token is what turns a bad package into a
+# push to your branches.
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build web bundle
+        run: npm run build
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Sync web assets into the Android project
+        run: npx cap sync android
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: spendingtapper-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
